@@ -478,6 +478,43 @@
         [(not inp) #f] ;; no date is fine too.
         [else (error 'make-bib "Not given a value that represents a date.")]))
 
+
+(define (default-renderer h)
+  (define author*
+    (cond [(not (auto-bib-author h)) #f]
+          [(author-element? (auto-bib-author h)) (auto-bib-author h)]
+          [else (parse-author (auto-bib-author h))]))
+  (define parsed-date (understand-date (auto-bib-date h)))
+  (make-auto-bib author* parsed-date
+                 (auto-bib-title h)
+                 (auto-bib-location h)
+                 (auto-bib-url h)
+                 (auto-bib-note h)
+                 (auto-bib-is-book? h)
+                 (content->string
+                  (make-element #f
+                                (append
+                                 (if author*
+                                     (list author*)
+                                     null)
+                                 (list (auto-bib-title h))
+                                 (if (auto-bib-location h)
+                                     (decode-content (list (auto-bib-location h)))
+                                     null)
+                                 (if (auto-bib-date h)
+                                     (decode-content
+                                      (list (default-render-date-bib parsed-date)))
+                                     null)
+                                 (if (auto-bib-url h)
+                                     (list (link (auto-bib-url h)
+                                                 (make-element 'url (list (auto-bib-url h)))))
+                                     null)
+                                 (if (auto-bib-note h)
+                                     (list (auto-bib-note h))
+                                     null))))
+                 "")
+  )
+
 ;; We delay making the element for the bib-entry because we may need to add
 ;; disambiguations during gen-bib.
 (define (make-bib #:title title
@@ -486,23 +523,11 @@
                   #:location [location #f]
                   #:date [date #f]
                   #:url [url #f]
-                  #:note [note #f])
-  (define author*
-    (cond [(not author) #f]
-          [(author-element? author) author]
-          [else (parse-author author)]))
-  (define parsed-date (understand-date date))
-  (make-auto-bib author* parsed-date title location url note is-book?
-                 (content->string
-                  (make-element #f
-                                (append
-                                 (if author* (list author*) null)
-                                 (list title)
-                                 (if location (decode-content (list location)) null)
-                                 (if date (decode-content (list (default-render-date-bib parsed-date))) null)
-                                 (if url (list (link url (make-element 'url (list url)))) null)
-                                 (if note (list note) null))))
-                 ""))
+                  #:note [note #f]
+                  #:extra [h (make-hasheq)]
+                  #:renderer [the-renderer default-renderer])
+  (the-renderer
+   (auto-bib author date title location url note is-book? #f #f)))
 
 (define (in-bib bib where)
   (make-auto-bib
