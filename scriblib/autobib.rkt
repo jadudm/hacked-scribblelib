@@ -524,10 +524,24 @@
                   #:date [date #f]
                   #:url [url #f]
                   #:note [note #f]
-                  #:extra [h (make-hasheq)]
+                  #:extra [extra (make-hasheq)]
                   #:renderer [the-renderer default-renderer])
-  (the-renderer
-   (auto-bib author date title location url note is-book? #f #f)))
+
+  ;; 20200321 MCJ
+  ;; The default implementation of this function used a large number of keyword
+  ;; parameters. We're patching that implementation to allow a hasheq to be passed
+  ;; in instead.
+  ;; 1. We could apply all of the keys to a hash, then overlay the user's extra keys.
+  ;; 2. We can ignore the keys completely.
+  ;; Doing #2 for now, but we might want to do something in-between.
+  (cond
+    [(and (hash-eq? extra)
+          (not (zero? (hash-count extra))))
+     (the-renderer extra)]
+    [else
+     (the-renderer
+      (auto-bib author date title location url note is-book? #f #f))]
+    ))
 
 (define (in-bib bib where)
   (make-auto-bib
