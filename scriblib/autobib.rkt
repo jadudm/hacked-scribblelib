@@ -18,7 +18,8 @@
 (provide define-cite
          author+date-style author+date-square-bracket-style number-style
          make-bib in-bib (rename-out [auto-bib? bib?])
-         author-name org-author-name 
+         author-name org-author-name
+         make-auto-bib
          (contract-out
           [authors (->* (content?) #:rest (listof content?) element?)]
           [proceedings-location
@@ -63,7 +64,7 @@
                                   #:source #'field
                                   "auto-bib-~a"
                                   (syntax-e #'field))])
-       #`(define id (λ (h) (hash-ref h (quote field)))))]))
+       #`(define id (λ (h) (hash-ref h (quote field) #f))))]))
 
 (auto-bib-accessor-maker author)
 (auto-bib-accessor-maker date)
@@ -531,7 +532,8 @@
                   #:date [date #f]
                   #:url [url #f]
                   #:note [note #f]
-                  #:extra [extra (make-hasheq)])
+                  #:extra [extra (make-hasheq)]
+                  #:renderer [the-renderer default-renderer])
 
   ;; 20200321 MCJ
   ;; The default implementation of this function used a large number of keyword
@@ -545,11 +547,11 @@
     ;; has been passed in.
     [(and (hash-eq? extra)
           (not (zero? (hash-count extra)))
-          (not (equal? (bib-renderer) default-renderer)))
-     ((bib-renderer) extra)]
+          (not (equal? the-renderer default-renderer)))
+     (the-renderer extra)]
     ;; Only use the keyword parameters if the default renderer is being used.
-    [(equal? (bib-renderer) default-renderer)
-     ((bib-renderer)
+    [(equal? the-renderer default-renderer)
+     (the-renderer
       (auto-bib author date title location url note is-book? #f #f))]
     ;; Otherwise, fail.
     [else
