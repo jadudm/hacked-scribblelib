@@ -535,12 +535,20 @@
   ;; 2. We can ignore the keys completely.
   ;; Doing #2 for now, but we might want to do something in-between.
   (cond
+    ;; Make sure there is content in the hash, and that a custom renderer
+    ;; has been passed in.
     [(and (hash-eq? extra)
-          (not (zero? (hash-count extra))))
+          (not (zero? (hash-count extra)))
+          (not (equal? the-renderer default-renderer)))
      (the-renderer extra)]
-    [else
+    ;; Only use the keyword parameters if the default renderer is being used.
+    [(equal? the-renderer default-renderer)
      (the-renderer
       (auto-bib author date title location url note is-book? #f #f))]
+    ;; Otherwise, fail.
+    [else
+     (error 'make-bib
+            "Either provide an #:extra and #:renderer, or use the documented keys.")]
     ))
 
 (define (in-bib bib where)
