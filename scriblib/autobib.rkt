@@ -54,6 +54,8 @@
 (define colbibnumber-style (make-style "Autocolbibnumber" autobib-style-extras))
 (define colbibentry-style (make-style "Autocolbibentry" autobib-style-extras))
 
+;; This parameter gets set once the default renderer is defined.
+(define bib-renderer (make-parameter #f))
 (define-syntax (auto-bib-accessor-maker stx)
   (syntax-case stx ()
     [(_ field)
@@ -515,6 +517,11 @@
                  "")
   )
 
+;; The default renderer is a parameter that the user can set/override.
+;; It is initialized to #f at the top of the module, and then re-initialized
+;; to the default renderer function here.
+(bib-renderer default-renderer)
+
 ;; We delay making the element for the bib-entry because we may need to add
 ;; disambiguations during gen-bib.
 (define (make-bib #:title title
@@ -524,8 +531,7 @@
                   #:date [date #f]
                   #:url [url #f]
                   #:note [note #f]
-                  #:extra [extra (make-hasheq)]
-                  #:renderer [the-renderer default-renderer])
+                  #:extra [extra (make-hasheq)])
 
   ;; 20200321 MCJ
   ;; The default implementation of this function used a large number of keyword
@@ -539,11 +545,11 @@
     ;; has been passed in.
     [(and (hash-eq? extra)
           (not (zero? (hash-count extra)))
-          (not (equal? the-renderer default-renderer)))
-     (the-renderer extra)]
+          (not (equal? (bib-renderer) default-renderer)))
+     ((bib-renderer) extra)]
     ;; Only use the keyword parameters if the default renderer is being used.
-    [(equal? the-renderer default-renderer)
-     (the-renderer
+    [(equal? (bib-renderer) default-renderer)
+     ((bib-renderer)
       (auto-bib author date title location url note is-book? #f #f))]
     ;; Otherwise, fail.
     [else
